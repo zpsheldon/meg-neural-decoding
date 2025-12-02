@@ -168,12 +168,12 @@ def visualize_lime_explanation(instance_ecg, top_influential_segments, num_slice
     plt.subplot(2, 1, 1)
     for i in range(1, num_slices):
         plt.axvline(x=i * (n_samples // num_slices), color='r', linestyle='--')
-    plt.plot(instance_ecg_chan, label='Original ECG Signal')
+    plt.plot(instance_ecg_chan)
     for segment in top_influential_segments:
         start_idx = segment * (n_samples // num_slices)
         end_idx = start_idx + (n_samples // num_slices)
         plt.axvspan(start_idx, end_idx, color='yellow', alpha=0.3)  # Highlight influential segments
-    plt.title('Original ECG Signal')
+    plt.title(f'Original Signal -- Channel {channel}')
     plt.xlabel('Time')
     plt.ylabel('Amplitude')
 
@@ -181,12 +181,12 @@ def visualize_lime_explanation(instance_ecg, top_influential_segments, num_slice
     plt.subplot(2, 1, 2)
     for i in range(1, num_slices):
         plt.axvline(x=i * (n_samples // num_slices), color='r', linestyle='--')
-    plt.plot(perturbed_signal[channel], label='Highlighted ECG Signal', color='green')
+    plt.plot(perturbed_signal[channel], color='green')
     for segment in top_influential_segments:
         start_idx = segment * (n_samples // num_slices)
         end_idx = start_idx + (n_samples // num_slices)
         plt.axvspan(start_idx, end_idx, color='yellow', alpha=0.3)  # Highlight influential segments
-    plt.title('Highlighted Key Segments')
+    plt.title('Perturbed Signal')
     plt.xlabel('Time')
     plt.ylabel('Amplitude')
 
@@ -230,7 +230,7 @@ def visualize_lime_explanation_all_channels(instance_ecg, top_influential_segmen
         start_idx = segment * (n_samples // num_slices)
         end_idx = start_idx + (n_samples // num_slices)
         plt.axvspan(start_idx, end_idx, color='yellow', alpha=0.3)  # Highlight influential segments
-    plt.title('Original ECG Signal')
+    plt.title('Original Signal')
     plt.xlabel('Time')
     plt.ylabel('Amplitude')
 
@@ -244,7 +244,7 @@ def visualize_lime_explanation_all_channels(instance_ecg, top_influential_segmen
         start_idx = segment * (n_samples // num_slices)
         end_idx = start_idx + (n_samples // num_slices)
         plt.axvspan(start_idx, end_idx, color='yellow', alpha=0.3)  # Highlight influential segments
-    plt.title('Highlighted Key Segments')
+    plt.title('Perturbed Signal')
     plt.xlabel('Time')
     plt.ylabel('Amplitude')
 
@@ -289,7 +289,7 @@ def visualize_ave_lime_explanation(instance_ecg, top_influential_segments, num_s
         start_idx = segment * (n_samples // num_slices)
         end_idx = start_idx + (n_samples // num_slices)
         plt.axvspan(start_idx, end_idx, color='yellow', alpha=0.3)  # Highlight influential segments
-    plt.title('Original ECG Signal')
+    plt.title('Ave. Original Signal')
     plt.xlabel('Time')
     plt.ylabel('Amplitude')
 
@@ -302,7 +302,7 @@ def visualize_ave_lime_explanation(instance_ecg, top_influential_segments, num_s
         start_idx = segment * (n_samples // num_slices)
         end_idx = start_idx + (n_samples // num_slices)
         plt.axvspan(start_idx, end_idx, color='yellow', alpha=0.3)  # Highlight influential segments
-    plt.title('Highlighted Key Segments')
+    plt.title('Ave. Perturbed Signal')
     plt.xlabel('Time')
     plt.ylabel('Amplitude')
 
