@@ -62,7 +62,7 @@ def segment_ecg_signal(instance_ecg, num_slices=40):
     Returns:
         int: The width of each slice in the segmented ECG signal.
     """
-    total_length = len(instance_ecg)
+    total_length = instance_ecg.shape[-1]
     slice_width = total_length // num_slices
     return slice_width
 
@@ -145,10 +145,10 @@ def apply_perturbation_to_ecg(signal, perturbation, num_segments, perturb_functi
     n_samples = signal.shape[1]
 
     full_perturbed_signal = np.zeros((n_channels, n_samples))
-    for chan in n_channels:
+    for chan in range(n_channels):
         # Copy the signal to avoid modifying the original
-        perturbed_signal = copy.deepcopy(signal)
-        segment_length = len(signal) // num_segments
+        perturbed_signal = copy.deepcopy(signal[chan])
+        segment_length = n_samples // num_segments
 
         # Apply the perturbation based on the provided vector
         for i, active in enumerate(perturbation):
@@ -186,8 +186,8 @@ def predict_perturbations(model, instance_ecg, random_perturbations, num_slices,
         perturbed_signal_reshaped = perturbed_signal.reshape(1, perturbed_signal.shape[0], perturbed_signal.shape[1])  
 
         # Predict the class probabilities
-        perturbed_signal_reshaped_torch = torch.from_numpy(perturbed_signal_reshaped)
-        model_prediction = model.predict_proba(perturbed_signal_reshaped_torch).numpy()
+        perturbed_signal_reshaped_torch = torch.from_numpy(perturbed_signal_reshaped).float()
+        model_prediction = model.predict_proba(perturbed_signal_reshaped_torch).detach().numpy()
         perturbation_predictions.append(model_prediction)
 
     # Convert the list of predictions into a numpy array

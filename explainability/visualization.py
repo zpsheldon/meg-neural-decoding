@@ -1,7 +1,7 @@
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-from lime_explanation import apply_perturbation_to_ecg, perturb_mean  
+# from lime_explanation import apply_perturbation_to_ecg, perturb_mean  
 
 def plot_class_distribution(labels, title="Class Distribution"):
     """
@@ -72,9 +72,12 @@ def plot_segmented_ecg(instance_ecg, slice_width):
         instance_ecg (np.ndarray): The ECG signal instance to plot.
         slice_width (int): The width of each slice in the segmented ECG signal.
     """
+    n_samples = instance_ecg.shape[-1]
+    n_channels = instance_ecg.shape[0]
     plt.figure(figsize=(12, 3))
-    plt.plot(instance_ecg, label='The selected ECG Signal')
-    num_slices = len(instance_ecg) // slice_width
+    for chan in range(n_channels):
+        plt.plot(np.arange(n_samples), instance_ecg[chan])
+    num_slices = n_samples // slice_width
     
     for i in range(1, num_slices):
         plt.axvline(x=i * slice_width, color='r', linestyle='--')
@@ -82,7 +85,6 @@ def plot_segmented_ecg(instance_ecg, slice_width):
     plt.title('Segmented the instance ECG signal')
     plt.xlabel('Time Index')
     plt.ylabel('Signal Amplitude')
-    plt.legend()
     plt.show()
 
 
@@ -132,7 +134,66 @@ def plot_perturbed_ecg(original_ecg, perturbed_ecg, perturbation, num_slices, ti
     plt.show()
 
 
-def visualize_lime_explanation(instance_ecg, top_influential_segments, num_slices, perturb_function=perturb_mean):
+def visualize_lime_explanation(instance_ecg, top_influential_segments, num_slices, perturb_function=perturb_mean, channel:int=0):
+    """
+    Visualizes the original ECG signal and highlights the top influential segments 
+    identified by a LIME explanation.
+
+    Parameters:
+    - instance_ecg (np.ndarray): The original ECG signal.
+    - top_influential_segments (np.ndarray): Indices of the top influential segments.
+    - num_slices (int): The number of segments the ECG signal is divided into.
+    - perturb_function (function): The perturbation function used (default is perturb_mean).
+    """
+
+    # grab specific channel
+    instance_ecg_chan = instance_ecg[channel]
+
+    # Initialize a mask with zeros
+    n_samples = instance_ecg_chan.shape[-1]
+    mask = np.zeros(n_samples)
+
+    # Activate the top influential segments
+    for segment in top_influential_segments:
+        start_idx = segment * (n_samples // num_slices)
+        end_idx = start_idx + (n_samples // num_slices)
+        mask[start_idx:end_idx] = 1  # Set the segment indices to 1
+
+    # Apply the mask to the original ECG signal
+    perturbed_signal = apply_perturbation_to_ecg(instance_ecg, mask, num_slices, perturb_function)
+
+    plt.figure(figsize=(12, 6))
+
+    # Plot the original ECG signal
+    plt.subplot(2, 1, 1)
+    for i in range(1, num_slices):
+        plt.axvline(x=i * (n_samples // num_slices), color='r', linestyle='--')
+    plt.plot(instance_ecg_chan, label='Original ECG Signal')
+    for segment in top_influential_segments:
+        start_idx = segment * (n_samples // num_slices)
+        end_idx = start_idx + (n_samples // num_slices)
+        plt.axvspan(start_idx, end_idx, color='yellow', alpha=0.3)  # Highlight influential segments
+    plt.title('Original ECG Signal')
+    plt.xlabel('Time')
+    plt.ylabel('Amplitude')
+
+    # Plot the perturbed signal with highlighted segments
+    plt.subplot(2, 1, 2)
+    for i in range(1, num_slices):
+        plt.axvline(x=i * (n_samples // num_slices), color='r', linestyle='--')
+    plt.plot(perturbed_signal[channel], label='Highlighted ECG Signal', color='green')
+    for segment in top_influential_segments:
+        start_idx = segment * (n_samples // num_slices)
+        end_idx = start_idx + (n_samples // num_slices)
+        plt.axvspan(start_idx, end_idx, color='yellow', alpha=0.3)  # Highlight influential segments
+    plt.title('Highlighted Key Segments')
+    plt.xlabel('Time')
+    plt.ylabel('Amplitude')
+
+    plt.tight_layout()
+    plt.show()
+
+def visualize_lime_explanation_all_channels(instance_ecg, top_influential_segments, num_slices, perturb_function=perturb_mean):
     """
     Visualizes the original ECG signal and highlights the top influential segments 
     identified by a LIME explanation.
@@ -144,12 +205,14 @@ def visualize_lime_explanation(instance_ecg, top_influential_segments, num_slice
     - perturb_function (function): The perturbation function used (default is perturb_mean).
     """
     # Initialize a mask with zeros
-    mask = np.zeros(len(instance_ecg))
+    n_samples = instance_ecg.shape[-1]
+    n_channels = instance_ecg.shape[0]
+    mask = np.zeros(n_samples)
 
     # Activate the top influential segments
     for segment in top_influential_segments:
-        start_idx = segment * (len(instance_ecg) // num_slices)
-        end_idx = start_idx + (len(instance_ecg) // num_slices)
+        start_idx = segment * (n_samples // num_slices)
+        end_idx = start_idx + (n_samples // num_slices)
         mask[start_idx:end_idx] = 1  # Set the segment indices to 1
 
     # Apply the mask to the original ECG signal
@@ -160,8 +223,13 @@ def visualize_lime_explanation(instance_ecg, top_influential_segments, num_slice
     # Plot the original ECG signal
     plt.subplot(2, 1, 1)
     for i in range(1, num_slices):
-        plt.axvline(x=i * (len(instance_ecg) // num_slices), color='r', linestyle='--')
-    plt.plot(instance_ecg, label='Original ECG Signal')
+        plt.axvline(x=i * (n_samples // num_slices), color='r', linestyle='--')
+    for chan in range(n_channels):
+        plt.plot(np.arange(n_samples), instance_ecg[chan], alpha=0.7)
+    for segment in top_influential_segments:
+        start_idx = segment * (n_samples // num_slices)
+        end_idx = start_idx + (n_samples // num_slices)
+        plt.axvspan(start_idx, end_idx, color='yellow', alpha=0.3)  # Highlight influential segments
     plt.title('Original ECG Signal')
     plt.xlabel('Time')
     plt.ylabel('Amplitude')
@@ -169,11 +237,70 @@ def visualize_lime_explanation(instance_ecg, top_influential_segments, num_slice
     # Plot the perturbed signal with highlighted segments
     plt.subplot(2, 1, 2)
     for i in range(1, num_slices):
-        plt.axvline(x=i * (len(instance_ecg) // num_slices), color='r', linestyle='--')
-    plt.plot(perturbed_signal, label='Highlighted ECG Signal', color='green')
+        plt.axvline(x=i * (n_samples // num_slices), color='r', linestyle='--')
+    for chan in range(n_channels):
+        plt.plot(np.arange(n_samples), perturbed_signal[chan], color='green')
     for segment in top_influential_segments:
-        start_idx = segment * (len(instance_ecg) // num_slices)
-        end_idx = start_idx + (len(instance_ecg) // num_slices)
+        start_idx = segment * (n_samples // num_slices)
+        end_idx = start_idx + (n_samples // num_slices)
+        plt.axvspan(start_idx, end_idx, color='yellow', alpha=0.3)  # Highlight influential segments
+    plt.title('Highlighted Key Segments')
+    plt.xlabel('Time')
+    plt.ylabel('Amplitude')
+
+    plt.tight_layout()
+    plt.show()
+
+def visualize_ave_lime_explanation(instance_ecg, top_influential_segments, num_slices, perturb_function=perturb_mean):
+    """
+    Visualizes the original ECG signal and highlights the top influential segments 
+    identified by a LIME explanation.
+
+    Parameters:
+    - instance_ecg (np.ndarray): The original ECG signal.
+    - top_influential_segments (np.ndarray): Indices of the top influential segments.
+    - num_slices (int): The number of segments the ECG signal is divided into.
+    - perturb_function (function): The perturbation function used (default is perturb_mean).
+    """
+
+    instance_ecg_chan = instance_ecg.mean(axis=0)
+
+    # Initialize a mask with zeros
+    n_samples = instance_ecg.shape[-1]
+    mask = np.zeros(n_samples)
+
+    # Activate the top influential segments
+    for segment in top_influential_segments:
+        start_idx = segment * (n_samples // num_slices)
+        end_idx = start_idx + (n_samples // num_slices)
+        mask[start_idx:end_idx] = 1  # Set the segment indices to 1
+
+    # Apply the mask to the original ECG signal
+    perturbed_signal = apply_perturbation_to_ecg(instance_ecg, mask, num_slices, perturb_function)
+
+    plt.figure(figsize=(12, 6))
+
+    # Plot the original ECG signal
+    plt.subplot(2, 1, 1)
+    for i in range(1, num_slices):
+        plt.axvline(x=i * (n_samples // num_slices), color='r', linestyle='--')
+    plt.plot(instance_ecg_chan, label='Original ECG Signal')
+    for segment in top_influential_segments:
+        start_idx = segment * (n_samples // num_slices)
+        end_idx = start_idx + (n_samples // num_slices)
+        plt.axvspan(start_idx, end_idx, color='yellow', alpha=0.3)  # Highlight influential segments
+    plt.title('Original ECG Signal')
+    plt.xlabel('Time')
+    plt.ylabel('Amplitude')
+
+    # Plot the perturbed signal with highlighted segments
+    plt.subplot(2, 1, 2)
+    for i in range(1, num_slices):
+        plt.axvline(x=i * (n_samples // num_slices), color='r', linestyle='--')
+    plt.plot(perturbed_signal.mean(axis=0), label='Highlighted ECG Signal', color='green')
+    for segment in top_influential_segments:
+        start_idx = segment * (n_samples // num_slices)
+        end_idx = start_idx + (n_samples // num_slices)
         plt.axvspan(start_idx, end_idx, color='yellow', alpha=0.3)  # Highlight influential segments
     plt.title('Highlighted Key Segments')
     plt.xlabel('Time')
