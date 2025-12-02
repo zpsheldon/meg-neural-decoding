@@ -1,7 +1,7 @@
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-# from lime_explanation import apply_perturbation_to_ecg, perturb_mean  
+from lime_explanation import apply_perturbation_to_ecg, perturb_mean  
 
 def plot_class_distribution(labels, title="Class Distribution"):
     """
