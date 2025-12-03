@@ -133,6 +133,54 @@ def plot_perturbed_ecg(original_ecg, perturbed_ecg, perturbation, num_slices, ti
     plt.tight_layout()
     plt.show()
 
+def plot_perturbed_ecg_all_channels(original_ecg, perturbed_ecg, perturbation, num_slices, title='ECG Signal with Perturbation'):
+    """
+    Plots the original and perturbed ECG signals with slices and deactivated segments highlighted.
+
+    Parameters:
+    - original_ecg (np.ndarray): The original ECG signal.
+    - perturbed_ecg (np.ndarray): The perturbed ECG signal after applying the perturbation.
+    - perturbation (np.ndarray): The perturbation vector used to modify the ECG signal.
+    - num_slices (int): The total number of segments the ECG signal is divided into.
+    - title (str): The title for the plot. Optional.
+    """
+    total_length = original_ecg.shape[1]
+    slice_width = total_length // num_slices
+    n_channels = original_ecg.shape[0]
+
+    plt.figure(figsize=(12, 6))
+
+    # Plot original ECG signal with slices and deactivated segments highlighted
+    plt.subplot(2, 1, 1)
+    for i in range(n_channels):
+        plt.plot(original_ecg[i], color='tab:blue', alpha=0.5)
+    plt.title(f'Original {title}')
+    for i in range(num_slices):
+        start_idx = i * slice_width
+        end_idx = min((i + 1) * slice_width, total_length)
+        plt.axvline(x=start_idx, color='r', linestyle='--', alpha=0.7)  # Slice boundary
+        if perturbation[i] == 0:  # If the segment is "off" in the perturbation
+            plt.axvspan(start_idx, end_idx, color='red', alpha=0.3)  # Highlight deactivated segment
+    plt.xlabel('Time')
+    plt.ylabel('Amplitude')
+
+    # Plot perturbed ECG signal with slices and deactivated segments highlighted
+    plt.subplot(2, 1, 2)
+    for i in range(n_channels):
+        plt.plot(perturbed_ecg[i], color='tab:green', alpha=0.7)
+    plt.title(f'Perturbed {title}')
+    for i in range(num_slices):
+        start_idx = i * slice_width
+        end_idx = min((i + 1) * slice_width, total_length)
+        plt.axvline(x=start_idx, color='r', linestyle='--', alpha=0.5)  # Slice boundary
+        if perturbation[i] == 0:  # If the segment is "off" in the perturbation
+            plt.axvspan(start_idx, end_idx, color='red', alpha=0.3)  # Highlight deactivated segment
+    plt.xlabel('Time')
+    plt.ylabel('Amplitude')
+
+    plt.tight_layout()
+    plt.show()
+
 
 def visualize_lime_explanation(instance_ecg, top_influential_segments, num_slices, perturb_function=perturb_mean, channel:int=0):
     """
@@ -193,7 +241,7 @@ def visualize_lime_explanation(instance_ecg, top_influential_segments, num_slice
     plt.tight_layout()
     plt.show()
 
-def visualize_lime_explanation_all_channels(instance_ecg, top_influential_segments, num_slices, perturb_function=perturb_mean):
+def visualize_lime_explanation_all_channels(instance_ecg, top_influential_segments, num_slices, perturb_function=lime_explanation.perturb_mean):
     """
     Visualizes the original ECG signal and highlights the top influential segments 
     identified by a LIME explanation.
@@ -216,7 +264,7 @@ def visualize_lime_explanation_all_channels(instance_ecg, top_influential_segmen
         mask[start_idx:end_idx] = 1  # Set the segment indices to 1
 
     # Apply the mask to the original ECG signal
-    perturbed_signal = apply_perturbation_to_ecg(instance_ecg, mask, num_slices, perturb_function)
+    perturbed_signal = lime_explanation.apply_perturbation_to_ecg(instance_ecg, mask, num_slices, perturb_function)
 
     plt.figure(figsize=(12, 6))
 
@@ -225,7 +273,7 @@ def visualize_lime_explanation_all_channels(instance_ecg, top_influential_segmen
     for i in range(1, num_slices):
         plt.axvline(x=i * (n_samples // num_slices), color='r', linestyle='--')
     for chan in range(n_channels):
-        plt.plot(np.arange(n_samples), instance_ecg[chan], alpha=0.7)
+        plt.plot(np.arange(n_samples), instance_ecg[chan], alpha=0.5, color="tab:blue")
     for segment in top_influential_segments:
         start_idx = segment * (n_samples // num_slices)
         end_idx = start_idx + (n_samples // num_slices)
@@ -239,7 +287,7 @@ def visualize_lime_explanation_all_channels(instance_ecg, top_influential_segmen
     for i in range(1, num_slices):
         plt.axvline(x=i * (n_samples // num_slices), color='r', linestyle='--')
     for chan in range(n_channels):
-        plt.plot(np.arange(n_samples), perturbed_signal[chan], color='green')
+        plt.plot(np.arange(n_samples), perturbed_signal[chan], color='tab:green', alpha=0.5)
     for segment in top_influential_segments:
         start_idx = segment * (n_samples // num_slices)
         end_idx = start_idx + (n_samples // num_slices)
