@@ -275,3 +275,85 @@ class PhonemeClassificationModel(L.LightningModule):
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=0.0005)
+    
+# Basic LightningModule
+class PhonemeClassificationModelCNNLSTM(L.LightningModule):
+    def __init__(self, num_channels:int=306, num_classes:int=39, hidden_dim:int=150, dropout_rate:float=0.5, lstm_layers:int=2):
+        super().__init__()
+        # args
+        self.lstm_layers = lstm_layers
+        # model
+        self.conv = nn.Conv1d(num_channels, hidden_dim, 1)
+        self.relu = nn.ReLU()
+        self.conv_dropout = nn.Dropout(p=dropout_rate)
+        self.lstm = nn.LSTM(
+                input_size=hidden_dim,
+                hidden_size=hidden_dim,
+                num_layers=self.lstm_layers,
+                dropout=dropout_rate,
+                batch_first=True,
+                bidirectional=False
+        )
+        self.lstm_dropout = nn.Dropout(p=dropout_rate)
+        self.linear = nn.Linear(hidden_dim, num_classes)
+        self.model = nn.Sequential(
+            self.conv,
+            self.relu,
+            self.conv_dropout,
+            self.lstm,
+            self.lstm_dropout,
+            nn.Flatten(),
+            self.linear
+        )
+        self.criterion = nn.CrossEntropyLoss()
+        self.f1_macro = F1Score(num_classes=num_classes, average='macro', task="multiclass")
+        self.test_f1_macro = F1Score(num_classes=num_classes, average='macro', task="multiclass")
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.relu(x)
+        x = self.conv_dropout(x)
+        # LSTM expects (batch, seq_len, input_size)
+        output, (h_n, c_n) = self.lstm(x.permute(0, 2, 1))
+        last_layer_h_n = h_n
+        if self.lstm_layers > 1:
+            # handle more than one layer
+            last_layer_h_n = h_n[-1, :, :]
+            last_layer_h_n = last_layer_h_n.unsqueeze(0)
+        output = self.lstm_dropout(last_layer_h_n)
+        output = output.flatten(start_dim=0, end_dim=1)
+        x = self.linear(output)
+        return x
+
+    def training_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self(x)
+        loss = self.criterion(y_hat, y)
+        f1_macro = self.f1_macro(y_hat, y)
+        self.log('train_loss', loss, prog_bar=True)
+        self.log('train_f1_macro', f1_macro)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self(x)
+        loss = self.criterion(y_hat, y)
+        f1_macro = self.f1_macro(y_hat, y)
+        self.log('val_loss', loss)
+        self.log('val_f1_macro', f1_macro, prog_bar=True)
+        return loss
+
+    def test_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self(x)
+        loss = self.criterion(y_hat, y)
+        f1_macro = self.test_f1_macro(y_hat, y)
+        self.log('test_loss', loss)
+        self.log('test_f1_macro', f1_macro, prog_bar=True)
+        return loss
+
+    def on_test_epoch_end(self):
+        self.log("test_f1_macro", self.test_f1_macro.compute(), prog_bar=True, on_epoch=True)
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.model.parameters(), lr=0.0005)
